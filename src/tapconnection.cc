@@ -307,8 +307,12 @@ ENGINE_ERROR_CODE ConnHandler::handleResponse(
 void ConnHandler::releaseReference(bool force)
 {
     bool inverse = true;
+    LOG(EXTENSION_LOG_NOTICE, "In function ConnHandler::releaseReference");
     if (force || reserved.compare_exchange_strong(inverse, false)) {
+        LOG(EXTENSION_LOG_NOTICE, "calling releaseCookie");
         engine_.releaseCookie(cookie);
+    } else {
+        LOG(EXTENSION_LOG_NOTICE, "Not calling releaseCookie");
     }
 }
 

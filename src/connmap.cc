@@ -1028,7 +1028,9 @@ void DcpConnMap::shutdownAllConnections() {
     for (auto &ii : toRelease) {
         LOG(EXTENSION_LOG_NOTICE, "Clean up \"%s\"", ii->getName().c_str());
         ii->releaseReference();
+        LOG(EXTENSION_LOG_NOTICE, "After releaseReference");
     }
+    LOG(EXTENSION_LOG_NOTICE, "Leaving function DcpConnMap::shutdownAllConnections");
 }
 
 void DcpConnMap::vbucketStateChanged(uint16_t vbucket, vbucket_state_t state,

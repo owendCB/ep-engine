@@ -1777,8 +1777,11 @@ extern "C" {
                     "is not NULL");
         }
         void *c = const_cast<void*>(cb_data);
+        LOG(EXTENSION_LOG_NOTICE, "EvpHandleDisconnect: before handleDeleteBucket");
         getHandle(static_cast<ENGINE_HANDLE*>(c))->handleDeleteBucket(cookie);
+        LOG(EXTENSION_LOG_NOTICE, "EvpHandleDisconnect: before releaseHandle");
         releaseHandle(static_cast<ENGINE_HANDLE*>(c));
+        LOG(EXTENSION_LOG_NOTICE, "EvpHandleDisconnect: end of function");
     }
 
     void EvpSetLogLevel(ENGINE_HANDLE* handle, EXTENSION_LOG_LEVEL level) {
@@ -2193,6 +2196,7 @@ void EventuallyPersistentEngine::destroy(bool force) {
         tapConnMap->shutdownAllConnections();
     }
     if (dcpConnMap_) {
+        LOG(EXTENSION_LOG_DEBUG, "EventuallyPersistentEngine::destroy.  Calling shutdownAllConnections");
         dcpConnMap_->shutdownAllConnections();
     }
 }
@@ -6291,6 +6295,8 @@ void EventuallyPersistentEngine::handleDeleteBucket(const void *cookie) {
         "whose cookie is: %p", cookie);
     tapConnMap->shutdownAllConnections();
     dcpConnMap_->shutdownAllConnections();
+    LOG(EXTENSION_LOG_NOTICE, "Leaving EventuallyPersistentEngine::handleDeleteBucket");
+
 }
 
 ENGINE_ERROR_CODE EventuallyPersistentEngine::getAllVBucketSequenceNumbers(
