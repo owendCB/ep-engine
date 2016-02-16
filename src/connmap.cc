@@ -1010,7 +1010,13 @@ DcpProducer *DcpConnMap::newProducer(const void* cookie,
 
 void DcpConnMap::shutdownAllConnections() {
     LOG(EXTENSION_LOG_NOTICE, "Shutting down dcp connections!");
-
+    if (deadConnections.empty()) {
+        LOG(EXTENSION_LOG_WARNING, "deadConnections is empty!");
+    } else {
+        LOG(EXTENSION_LOG_WARNING,
+            "deadConnections is NOT empty. It contains %lu elements",
+            deadConnections.size());
+    }
     connNotifier_->stop();
 
 
@@ -1085,6 +1091,7 @@ void DcpConnMap::cancelAllTasks_UNLOCKED() {
 }
 
 void DcpConnMap::disconnect(const void *cookie) {
+    LOG(EXTENSION_LOG_WARNING, "DcpConnMap::disconnect");
     LockHolder lh(connsLock);
     disconnect_UNLOCKED(cookie);
 }
@@ -1103,7 +1110,7 @@ void DcpConnMap::disconnect_UNLOCKED(const void *cookie) {
     if (itr != map_.end()) {
         connection_t conn = itr->second;
         if (conn.get()) {
-            LOG(EXTENSION_LOG_INFO, "%s Removing connection",
+            LOG(EXTENSION_LOG_WARNING, "%s Removing connection",
                 conn->logHeader());
             map_.erase(itr);
         }
@@ -1117,6 +1124,8 @@ void DcpConnMap::disconnect_UNLOCKED(const void *cookie) {
             static_cast<DcpConsumer*>(conn.get())->closeAllStreams();
         }
 
+        LOG(EXTENSION_LOG_WARNING,
+            "DcpConnMap::disconnect_UNLOCKED Adding to deadConnections");
         deadConnections.push_back(conn);
     }
 }
