@@ -310,8 +310,10 @@ const Logger& ConnHandler::getLogger() const {
 
 void ConnHandler::releaseReference(bool force)
 {
+    logger.log(EXTENSION_LOG_WARNING, "ConnHandler::releaseReference force = %d", (int)force);
     bool inverse = true;
     if (force || reserved.compare_exchange_strong(inverse, false)) {
+        logger.log(EXTENSION_LOG_WARNING, "ConnHandler::releaseReference calling releaseCookie coookie = %p", (void*)cookie);
         engine_.releaseCookie(cookie);
     }
 }

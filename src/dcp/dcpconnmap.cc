@@ -126,7 +126,7 @@ DcpProducer *DcpConnMap::newProducer(const void* cookie,
 }
 
 void DcpConnMap::shutdownAllConnections() {
-    LOG(EXTENSION_LOG_NOTICE, "Shutting down dcp connections!");
+    LOG(EXTENSION_LOG_WARNING, "Shutting down dcp connections!");
 
     connNotifier_->stop();
 
@@ -262,6 +262,7 @@ void DcpConnMap::manageConnections() {
     LockHolder lh(connsLock);
     while (!deadConnections.empty()) {
         connection_t conn = deadConnections.front();
+        LOG(EXTENSION_LOG_wARNING, "DcpConnMapp::manageConnections dead connection= %p",(void*)conn);
         release.push_back(conn);
         deadConnections.pop_front();
     }
