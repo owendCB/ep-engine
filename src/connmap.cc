@@ -936,11 +936,14 @@ DcpConsumer *DcpConnMap::newConsumer(const void* cookie,
     std::list<connection_t>::iterator iter;
     for (iter = all.begin(); iter != all.end(); ++iter) {
         if ((*iter)->getName() == conn_name) {
+             LOG(EXTENSION_LOG_WARNING, "newConsumer:  SAMENAME %s Connection", conn_name.c_str());
             (*iter)->setDisconnect(true);
             all.erase(iter);
+            //sameNameConnection.push_back(*iter);
             break;
         }
-    }
+   }
+    //disconnect_UNLOCKED(cookie);
 
     DcpConsumer *dcp = new DcpConsumer(engine, cookie, conn_name);
     connection_t dc(dcp);
@@ -994,11 +997,14 @@ DcpProducer *DcpConnMap::newProducer(const void* cookie,
     std::list<connection_t>::iterator iter;
     for (iter = all.begin(); iter != all.end(); ++iter) {
         if ((*iter)->getName() == conn_name) {
+            LOG(EXTENSION_LOG_WARNING, "newProducer:  SAMENAME %s Connection", conn_name.c_str());
             (*iter)->setDisconnect(true);
             all.erase(iter);
+            //sameNameConnection.push_back(*iter);
             break;
         }
     }
+   // disconnect_UNLOCKED(cookie);
 
     DcpProducer *dcp = new DcpProducer(engine, cookie, conn_name, notifyOnly);
     LOG(EXTENSION_LOG_INFO, "%s Connection created", dcp->logHeader());
@@ -1009,6 +1015,7 @@ DcpProducer *DcpConnMap::newProducer(const void* cookie,
 }
 
 void DcpConnMap::shutdownAllConnections() {
+     LOG(EXTENSION_LOG_WARNING, "DcpConnMap::shutdownAllConnections");
     LOG(EXTENSION_LOG_NOTICE, "Shutting down dcp connections!");
 
     connNotifier_->stop();
@@ -1019,6 +1026,9 @@ void DcpConnMap::shutdownAllConnections() {
 
     closeAllStreams_UNLOCKED();
     cancelAllTasks_UNLOCKED();
+    
+    LOG(EXTENSION_LOG_WARNING, "DcpConnMap::shutdownAllConnections all size = %d", all.size());
+    LOG(EXTENSION_LOG_WARNING, "DcpConnMap::shutdownAllConnections map_ size = %d", map_.size());
     all.clear();
     map_.clear();
 
@@ -1030,6 +1040,11 @@ void DcpConnMap::shutdownAllConnections() {
              LOG(EXTENSION_LOG_NOTICE, "Clean up \"%s\"", ii->getName().c_str());
              ii->releaseReference();
          }
+        
+        for (auto &ii : sameNameConnection) {
+            LOG(EXTENSION_LOG_NOTICE, "sameNameConnection Clean up \"%s\"", ii->getName().c_str());
+            ii->releaseReference();
+        }
     }
     /*
      * Dead connections are cleaned-up by manageConnections.
@@ -1044,7 +1059,12 @@ void DcpConnMap::shutdownAllConnections() {
      * Therefore before deleting a bucket we need to ensure that
      * manageConnections is called.
      */
+    LOG(EXTENSION_LOG_WARNING, "DcpConnMap::shutdownAllConnections just BEFORE manageConnections");
     manageConnections();
+    LOG(EXTENSION_LOG_WARNING, "DcpConnMap::shutdownAllConnections just AFTER manageConnections");
+    
+    LOG(EXTENSION_LOG_WARNING, "DcpConnMap::shutdownAllConnections (at end) all size = %d", all.size());
+    LOG(EXTENSION_LOG_WARNING, "DcpConnMap::shutdownAllConnections (at end) map_ size = %d", map_.size());
 }
 
 void DcpConnMap::vbucketStateChanged(uint16_t vbucket, vbucket_state_t state,
@@ -1089,6 +1109,17 @@ void DcpConnMap::closeAllStreams_UNLOCKED() {
             static_cast<DcpConsumer*>(itr->second.get())->closeAllStreams();
         }
     }
+    
+    
+    for (auto &ii : sameNameConnection) {
+            DcpProducer* producer = dynamic_cast<DcpProducer*> (ii.get());
+        if (producer) {
+            producer->closeAllStreams();
+            producer->clearCheckpointProcessorTaskQueues();
+        } else {
+            static_cast<DcpConsumer*>(ii.get())->closeAllStreams();
+        }
+    }
 }
 
 void DcpConnMap::cancelAllTasks_UNLOCKED() {
@@ -1099,6 +1130,14 @@ void DcpConnMap::cancelAllTasks_UNLOCKED() {
             consumer->cancelTask();
         }
     }
+    
+    for (auto &ii : sameNameConnection) {
+        DcpConsumer* consumer = dynamic_cast<DcpConsumer*> (ii.get());
+        if (consumer) {
+            consumer->cancelTask();
+        }
+    }
+
 }
 
 void DcpConnMap::disconnect(const void *cookie) {
@@ -1107,10 +1146,12 @@ void DcpConnMap::disconnect(const void *cookie) {
 }
 
 void DcpConnMap::disconnect_UNLOCKED(const void *cookie) {
+    LOG(EXTENSION_LOG_WARNING, "DcpConnMap::disconnect_UNLOCKED cookie = %p", (void*)cookie);
     std::list<connection_t>::iterator iter;
     for (iter = all.begin(); iter != all.end(); ++iter) {
         if ((*iter)->getCookie() == cookie) {
             (*iter)->setDisconnect(true);
+            LOG(EXTENSION_LOG_WARNING, "DcpConnMap::disconnect_UNLOCKED: for loop found cookie = %p erasing from all", (void*)cookie);
             all.erase(iter);
             break;
         }
@@ -1120,35 +1161,42 @@ void DcpConnMap::disconnect_UNLOCKED(const void *cookie) {
     if (itr != map_.end()) {
         connection_t conn = itr->second;
         if (conn.get()) {
-            LOG(EXTENSION_LOG_INFO, "%s Removing connection",
+            LOG(EXTENSION_LOG_WARNING, "DcpConnMap::disconnect_UNLOCKED: %s Removing connection (erasing from map_)",
                 conn->logHeader());
             map_.erase(itr);
         }
 
         DcpProducer* producer = dynamic_cast<DcpProducer*> (conn.get());
         if (producer) {
+            LOG(EXTENSION_LOG_WARNING, "DcpConnMap::disconnect_UNLOCKED cookie = %p is PRODUCER", (void*)cookie);
             producer->closeAllStreams();
             producer->clearCheckpointProcessorTaskQueues();
         } else {
             // Cancel consumer's processer task before closing all streams
+            LOG(EXTENSION_LOG_WARNING, "DcpConnMap::disconnect_UNLOCKED cookie = %p is CONSUMER", (void*)cookie);
             static_cast<DcpConsumer*>(conn.get())->cancelTask();
             static_cast<DcpConsumer*>(conn.get())->closeAllStreams();
         }
 
         deadConnections.push_back(conn);
     }
+    else {
+        LOG(EXTENSION_LOG_WARNING, "DcpConnMap::disconnect_UNLOCKED: could not find cookie %p in the map so won't have deadConnection", (void*)cookie);
+    }
 }
 
 void DcpConnMap::manageConnections() {
+    LOG(EXTENSION_LOG_WARNING, "DcpConnMap::manageConnections START");
     std::list<connection_t> release;
 
     LockHolder lh(connsLock);
     while (!deadConnections.empty()) {
         connection_t conn = deadConnections.front();
+        LOG(EXTENSION_LOG_WARNING, "DcpConnMap::manageConnections: Adding conn = %p to deadConnections list", (void*)conn->getCookie());
         release.push_back(conn);
         deadConnections.pop_front();
     }
-
+    LOG(EXTENSION_LOG_WARNING, "DcpConnMap::manageConnections: Finished collecting deadConnections");
     const int maxIdleTime = 5;
     rel_time_t now = ep_current_time();
 
@@ -1162,30 +1210,36 @@ void DcpConnMap::manageConnections() {
             conn->isReserved()) {
             if (!tp->sentNotify() ||
                 (conn->getLastWalkTime() + maxIdleTime < now)) {
+                LOG(EXTENSION_LOG_WARNING, "DcpConnMap::manageConnections: Adding conn = %p to toNotify list", (void*)conn->getCookie());
                 toNotify.push_back(iter->second);
             }
         }
     }
 
     lh.unlock();
-
+ LOG(EXTENSION_LOG_WARNING, "DcpConnMap::manageConnections: Finished building toNotify list");
+    
     LockHolder rlh(releaseLock);
     std::list<connection_t>::iterator it;
     for (it = toNotify.begin(); it != toNotify.end(); ++it) {
         Notifiable *tp =
             static_cast<Notifiable*>(static_cast<Producer*>((*it).get()));
         if (tp && (*it)->isReserved()) {
+             LOG(EXTENSION_LOG_WARNING, "DcpConnMap::manageConnections: calling notifyIOComplete cookie = %p", (void*)(*it)->getCookie());
             engine.notifyIOComplete((*it)->getCookie(), ENGINE_SUCCESS);
             tp->setNotifySent(true);
         }
     }
 
+     LOG(EXTENSION_LOG_WARNING, "DcpConnMap::manageConnections: Finished sending notityIOcompletes");
     while (!release.empty()) {
         connection_t conn = release.front();
+        LOG(EXTENSION_LOG_WARNING, "DcpConnMap::manageConnections: Releasing deadConnection conn = %p", (void*)conn->getCookie());
         conn->releaseReference();
         release.pop_front();
         removeVBConnections(conn);
     }
+      LOG(EXTENSION_LOG_WARNING, "DcpConnMap::manageConnections END");
 }
 
 void DcpConnMap::removeVBConnections(connection_t &conn) {

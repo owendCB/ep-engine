@@ -521,6 +521,8 @@ protected:
      * of the module test ep-engine_dead_connections_test
      */
     std::list<connection_t> deadConnections;
+    
+    std::list<connection_t> sameNameConnection;
 
 private:
 

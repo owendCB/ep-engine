@@ -311,8 +311,13 @@ const Logger& ConnHandler::getLogger() const {
 void ConnHandler::releaseReference(bool force)
 {
     bool inverse = true;
+    logger.log(EXTENSION_LOG_WARNING, "ConnHandler::releaseReference");
     if (force || reserved.compare_exchange_strong(inverse, false)) {
+        logger.log(EXTENSION_LOG_WARNING, "actually releasing the cookie %p force = %d", (void*)cookie, force);
         engine_.releaseCookie(cookie);
+    } else
+    {
+        logger.log(EXTENSION_LOG_WARNING, "NOT releasing the cookie %p force = %d", (void*)cookie, force);
     }
 }
 
