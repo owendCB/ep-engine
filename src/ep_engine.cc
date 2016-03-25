@@ -6228,9 +6228,11 @@ ENGINE_ERROR_CODE EventuallyPersistentEngine::dcpOpen(const void* cookie,
     }
 
     if (handler == nullptr) {
-        throw std::logic_error("EPEngine::dcpOpen: failed to create a handler");
+        LOG(EXTENSION_LOG_WARNING, "EPEngine::dcpOpen: failed to create a handler");
+        return ENGINE_DISCONNECT;
+    } else {
+        storeEngineSpecific(cookie, handler);
     }
-    storeEngineSpecific(cookie, handler);
 
     return ENGINE_SUCCESS;
 }

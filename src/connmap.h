@@ -178,6 +178,14 @@ public:
 
     virtual void shutdownAllConnections() = 0;
 
+    virtual bool deadConnectionsEmpty() {
+        return true;
+    }
+
+    bool allEmpty() {
+        return all.empty();
+    }
+
     void updateVBConnections(connection_t &conn,
                              const std::vector<uint16_t> &vbuckets);
 
@@ -474,6 +482,10 @@ public:
                              bool closeInboundStreams = true);
 
     void shutdownAllConnections();
+
+    bool deadConnectionsEmpty() {
+        return deadConnections.empty();
+    }
 
     /**
      * Closes the stream with the specified name.
