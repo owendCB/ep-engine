@@ -942,6 +942,17 @@ DcpConsumer *DcpConnMap::newConsumer(const void* cookie,
         return nullptr;
     }
 
+    for (const auto conn: all) {
+        /*
+         *  If we request a connection of the same name then
+         *  mark the existing connection as "want to disconnect".
+         */
+        if (conn->getName() == conn_name) {
+            conn->setDisconnect(true);
+            break;
+        }
+    }
+
     DcpConsumer *dcp = new DcpConsumer(engine, cookie, conn_name);
     connection_t dc(dcp);
     LOG(EXTENSION_LOG_INFO, "%s Connection created", dc->logHeader());
@@ -998,6 +1009,17 @@ DcpProducer *DcpConnMap::newProducer(const void* cookie,
         return nullptr;
     }
 
+    for (const auto conn: all) {
+        /*
+         *  If we request a connection of the same name then
+         *  mark the existing connection as "want to disconnect".
+         */
+        if (conn->getName() == conn_name) {
+            conn->setDisconnect(true);
+            break;
+        }
+    }
+    
     DcpProducer *dcp = new DcpProducer(engine, cookie, conn_name, notifyOnly);
     LOG(EXTENSION_LOG_INFO, "%s Connection created", dcp->logHeader());
     all.push_back(connection_t(dcp));
