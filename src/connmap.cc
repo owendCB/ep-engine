@@ -935,11 +935,23 @@ DcpConsumer *DcpConnMap::newConsumer(const void* cookie,
     std::string conn_name("eq_dcpq:");
     conn_name.append(name);
 
-    if (map_.count(cookie) != 0) {
-        LOG(EXTENSION_LOG_WARNING,
-            "Failed to create Dcp Consumer because connection "
-            "(%p) already exists", cookie);
-        return nullptr;
+    // If cookie is already in the map then remove
+    auto search = map_.find(cookie);
+    if (search != map_.end()) {
+        search->second->setDisconnect(true);
+        map_.erase(cookie);
+    }
+
+    // If name is already in the map then remove
+    const void* cookie_to_remove = nullptr;
+    for (const auto& kv : map_) {
+        if (kv.second->getName() == conn_name) {
+            kv.second->setDisconnect(true);
+            cookie_to_remove = kv.first;
+        }
+    }
+    if (cookie_to_remove != nullptr) {
+        map_.erase(cookie_to_remove);
     }
 
     DcpConsumer *dcp = new DcpConsumer(engine, cookie, conn_name);
@@ -991,11 +1003,23 @@ DcpProducer *DcpConnMap::newProducer(const void* cookie,
     std::string conn_name("eq_dcpq:");
     conn_name.append(name);
 
-    if (map_.count(cookie) != 0) {
-        LOG(EXTENSION_LOG_WARNING,
-            "Failed to create Dcp Producer because connection "
-            "(%p) already exists", cookie);
-        return nullptr;
+    // If cookie is already in the map then remove
+    auto search = map_.find(cookie);
+    if (search != map_.end()) {
+        search->second->setDisconnect(true);
+        map_.erase(cookie);
+    }
+
+    // If name is already in the map then remove
+    const void* cookie_to_remove = nullptr;
+    for (const auto& kv : map_) {
+        if (kv.second->getName() == conn_name) {
+            kv.second->setDisconnect(true);
+            cookie_to_remove = kv.first;
+        }
+    }
+    if (cookie_to_remove != nullptr) {
+        map_.erase(cookie_to_remove);
     }
 
     DcpProducer *dcp = new DcpProducer(engine, cookie, conn_name, notifyOnly);
@@ -1078,22 +1102,21 @@ void DcpConnMap::disconnect(const void *cookie) {
 }
 
 void DcpConnMap::disconnect_UNLOCKED(const void *cookie) {
-    std::list<connection_t>::iterator iter;
-    for (iter = all.begin(); iter != all.end(); ++iter) {
+    std::vector<connection_t> connections_to_disconnect;
+    for (auto iter = all.begin(); iter != all.end(); ++iter) {
         if ((*iter)->getCookie() == cookie) {
             (*iter)->setDisconnect(true);
+            connections_to_disconnect.push_back(*iter);
             all.erase(iter);
-            break;
         }
     }
 
-    std::map<const void*, connection_t>::iterator itr(map_.find(cookie));
-    if (itr != map_.end()) {
-        connection_t conn = itr->second;
-        if (conn.get()) {
-            LOG(EXTENSION_LOG_INFO, "%s Removing connection",
-                conn->logHeader());
-            map_.erase(itr);
+    for (const auto& conn: connections_to_disconnect) {
+        LOG(EXTENSION_LOG_INFO, "%s Removing connection",
+            conn->logHeader());
+        auto search = map_.find(cookie);
+        if (search != map_.end()) {
+            map_.erase(cookie);
         }
 
         DcpProducer* producer = dynamic_cast<DcpProducer*> (conn.get());

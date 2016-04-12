@@ -1351,10 +1351,15 @@ static enum test_result test_dcp_producer_open_same_cookie(ENGINE_HANDLE *h,
      */
     testHarness.store_engine_specific(cookie, nullptr);
 
-    checkeq(ENGINE_DISCONNECT,
+    checkeq(ENGINE_SUCCESS,
             h1->dcp.open(h, cookie, opaque++, seqno, DCP_OPEN_PRODUCER,
                          (void*)name.c_str(), name.size()),
-            "Failed to return ENGINE_DISCONNECT");
+            "Failed dcp producer open connection.");
+
+    checkeq(3, testHarness.get_number_of_mock_cookie_references(cookie),
+            "Number of cookie references is not three");
+
+    testHarness.destroy_cookie(cookie);
 
     checkeq(2, testHarness.get_number_of_mock_cookie_references(cookie),
             "Number of cookie references is not two");

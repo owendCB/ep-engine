@@ -357,6 +357,7 @@ TEST_F(ConnectionTest, test_mb17042_duplicate_name_producer_connections) {
     // Create a duplicate Dcp producer
     dcp_producer_t duplicateproducer = connMap.newProducer(cookie2, "test_producer",
                                                            /*notifyOnly*/false);
+    EXPECT_TRUE(producer) << "producer doDisconnect == false";
     EXPECT_NE(0, (int)duplicateproducer) << "duplicateproducer is null";
 
     producer.reset();
@@ -376,6 +377,7 @@ TEST_F(ConnectionTest, test_mb17042_duplicate_name_consumer_connections) {
 
     // Create a duplicate Dcp consumer
     dcp_consumer_t duplicateconsumer = connMap.newConsumer(cookie2, "test_consumer");
+    EXPECT_TRUE(consumer) << "consumer doDisconnect == false";
     EXPECT_NE(0, (int)duplicateconsumer) << "duplicateconsumer is null";
 
     consumer->cancelTask();
@@ -397,7 +399,8 @@ TEST_F(ConnectionTest, test_mb17042_duplicate_cookie_producer_connections) {
     // Create a duplicate Dcp producer
     dcp_producer_t duplicateproducer = connMap.newProducer(cookie, "test_producer2",
                                                             /*notifyOnly*/false);
-    EXPECT_EQ(0, (int)duplicateproducer) << "duplicateproducer is not null";
+    EXPECT_TRUE(producer) << "producer doDisconnect == false";
+    EXPECT_NE(0, (int)duplicateproducer) << "duplicateproducer is null";
 
     producer.reset();
     delete cookie;
@@ -412,7 +415,8 @@ TEST_F(ConnectionTest, test_mb17042_duplicate_cookie_consumer_connections) {
 
     // Create a duplicate Dcp consumer
     dcp_consumer_t duplicateconsumer = connMap.newConsumer(cookie, "test_consumer2");
-    EXPECT_EQ(0, (int)duplicateconsumer) << "duplicateconsumer is not null";
+    EXPECT_TRUE(consumer) << "consumer doDisconnect == false";
+    EXPECT_NE(0, (int)duplicateconsumer) << "duplicateconsumer is null";
 
     consumer->cancelTask();
     consumer.reset();
