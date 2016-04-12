@@ -935,11 +935,24 @@ DcpConsumer *DcpConnMap::newConsumer(const void* cookie,
     std::string conn_name("eq_dcpq:");
     conn_name.append(name);
 
-    if (map_.count(cookie) != 0) {
-        LOG(EXTENSION_LOG_WARNING,
+    const auto& iter = map_.find(cookie);
+    if (iter != map_.end()) {
+        iter->second->setDisconnect(true);
+        LOG(EXTENSION_LOG_NOTICE,
             "Failed to create Dcp Consumer because connection "
-            "(%p) already exists", cookie);
+            "(%p) already exists.", cookie);
         return nullptr;
+    }
+
+    /*
+     *  If we request a connection of the same name then
+     *  mark the existing connection as "want to disconnect".
+     */
+    for (auto iter = all.begin(); iter != all.end(); ++iter) {
+        if ((*iter)->getName() == conn_name) {
+            (*iter)->setDisconnect(true);
+            break;
+        }
     }
 
     DcpConsumer *dcp = new DcpConsumer(engine, cookie, conn_name);
@@ -950,6 +963,7 @@ DcpConsumer *DcpConnMap::newConsumer(const void* cookie,
     return dcp;
 
 }
+
 
 bool DcpConnMap::isPassiveStreamConnected_UNLOCKED(uint16_t vbucket) {
     std::list<connection_t>::iterator it;
@@ -991,11 +1005,24 @@ DcpProducer *DcpConnMap::newProducer(const void* cookie,
     std::string conn_name("eq_dcpq:");
     conn_name.append(name);
 
-    if (map_.count(cookie) != 0) {
-        LOG(EXTENSION_LOG_WARNING,
+    const auto& iter = map_.find(cookie);
+    if (iter != map_.end()) {
+        iter->second->setDisconnect(true);
+        LOG(EXTENSION_LOG_NOTICE,
             "Failed to create Dcp Producer because connection "
-            "(%p) already exists", cookie);
+            "(%p) already exists.", cookie);
         return nullptr;
+    }
+
+    /*
+     *  If we request a connection of the same name then
+     *  mark the existing connection as "want to disconnect".
+     */
+    for (auto iter = all.begin(); iter != all.end(); ++iter) {
+        if ((*iter)->getName() == conn_name) {
+            (*iter)->setDisconnect(true);
+            break;
+        }
     }
 
     DcpProducer *dcp = new DcpProducer(engine, cookie, conn_name, notifyOnly);
@@ -1005,6 +1032,8 @@ DcpProducer *DcpConnMap::newProducer(const void* cookie,
 
     return dcp;
 }
+
+
 
 void DcpConnMap::shutdownAllConnections() {
     LOG(EXTENSION_LOG_NOTICE, "Shutting down dcp connections!");
