@@ -1126,13 +1126,13 @@ extern "C" {
 
         case PROTOCOL_BINARY_CMD_GET_VBUCKET:
             {
-                BlockTimer timer(&stats.getVbucketCmdHisto);
+                BlockTimer timer(&stats.getVbucketCmdHisto, "PROTOCOL_BINARY_CMD_GET_VBUCKET");
                 rv = getVBucket(h, cookie, request, response);
                 return rv;
             }
         case PROTOCOL_BINARY_CMD_DEL_VBUCKET:
             {
-                BlockTimer timer(&stats.delVbucketCmdHisto);
+                BlockTimer timer(&stats.delVbucketCmdHisto, "PROTOCOL_BINARY_CMD_DEL_VBUCKET");
                 rv = delVBucket(h, cookie, request, response);
                 if (rv != ENGINE_EWOULDBLOCK) {
                     h->decrementSessionCtr();
@@ -1142,7 +1142,7 @@ extern "C" {
             }
         case PROTOCOL_BINARY_CMD_SET_VBUCKET:
             {
-                BlockTimer timer(&stats.setVbucketCmdHisto);
+                BlockTimer timer(&stats.setVbucketCmdHisto, "PROTOCOL_BINARY_CMD_SET_VBUCKET");
                 rv = setVBucket(h, cookie, request, response);
                 h->decrementSessionCtr();
                 return rv;
@@ -2203,7 +2203,7 @@ ENGINE_ERROR_CODE EventuallyPersistentEngine::store(const void *cookie,
                                                     ENGINE_STORE_OPERATION
                                                                      operation,
                                                     uint16_t vbucket) {
-    BlockTimer timer(&stats.storeCmdHisto);
+    BlockTimer timer(&stats.storeCmdHisto, "EventuallyPersistentEngine::store");
     ENGINE_ERROR_CODE ret;
     Item *it = static_cast<Item*>(itm);
     item *i = NULL;
@@ -2816,7 +2816,7 @@ ENGINE_ERROR_CODE EventuallyPersistentEngine::tapNotify(const void *cookie,
                     LOG(EXTENSION_LOG_INFO,
                         "%s Backfill started for vbucket %d.\n",
                         connection->logHeader(), vbucket);
-                    BlockTimer timer(&stats.tapVbucketResetHisto);
+                    BlockTimer timer(&stats.tapVbucketResetHisto, "TAP_OPAQUE_INITIAL_VBUCKET_STREAM");
                     ret = resetVBucket(vbucket) ? ENGINE_SUCCESS :
                                                   ENGINE_DISCONNECT;
                     if (ret == ENGINE_DISCONNECT) {
@@ -2890,7 +2890,7 @@ ENGINE_ERROR_CODE EventuallyPersistentEngine::tapNotify(const void *cookie,
 
     case TAP_VBUCKET_SET:
         {
-            BlockTimer timer(&stats.tapVbucketSetHisto);
+            BlockTimer timer(&stats.tapVbucketSetHisto, "TAP_VBUCKET_SET");
 
             if (nengine != sizeof(vbucket_state_t)) {
                 // illegal datasize
@@ -4529,7 +4529,7 @@ ENGINE_ERROR_CODE EventuallyPersistentEngine::getStats(const void* cookie,
                                                        const char* stat_key,
                                                        int nkey,
                                                        ADD_STAT add_stat) {
-    BlockTimer timer(&stats.getStatsCmdHisto);
+    BlockTimer timer(&stats.getStatsCmdHisto, "EventuallyPersistentEngine::getStats");
     if (stat_key != NULL) {
         LOG(EXTENSION_LOG_DEBUG, "stats %.*s", nkey, stat_key);
     } else {

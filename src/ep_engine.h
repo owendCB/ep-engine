@@ -290,7 +290,7 @@ public:
                           uint16_t vbucket,
                           get_options_t options = NONE)
     {
-        BlockTimer timer(&stats.getCmdHisto);
+        BlockTimer timer(&stats.getCmdHisto, "get");
         std::string k(static_cast<const char*>(key), nkey);
 
         GetValue gv(epstore->get(k, vbucket, cookie));
@@ -345,7 +345,7 @@ public:
                                  uint64_t *result,
                                  uint16_t vbucket)
     {
-        BlockTimer timer(&stats.arithCmdHisto);
+        BlockTimer timer(&stats.arithCmdHisto, "arithmetic");
         item *it = NULL;
         Item *nit = NULL;
         uint64_t cas = 0;
@@ -546,7 +546,7 @@ public:
         if (cookie == NULL) {
             LOG(EXTENSION_LOG_WARNING, "Tried to signal a NULL cookie!");
         } else {
-            BlockTimer bt(&stats.notifyIOHisto);
+            BlockTimer bt(&stats.notifyIOHisto, "notifyIOComplete");
             EventuallyPersistentEngine *epe = ObjectRegistry::onSwitchThread(NULL, true);
             serverApi->cookie->notify_io_complete(cookie, status);
             ObjectRegistry::onSwitchThread(epe);

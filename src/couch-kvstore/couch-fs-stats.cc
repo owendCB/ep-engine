@@ -66,7 +66,7 @@ ssize_t StatsOps::pread(couchstore_error_info_t* errinfo,
         stats.readSeekHisto.add(std::abs(off - sf->last_offs));
     }
     sf->last_offs = off;
-    BlockTimer bt(&stats.readTimeHisto);
+    BlockTimer bt(&stats.readTimeHisto, "StatsOps::pread");
     ssize_t result = sf->orig_ops->pread(errinfo, sf->orig_handle, buf,
                                          sz, off);
     if (result > 0) {
@@ -82,7 +82,7 @@ ssize_t StatsOps::pwrite(couchstore_error_info_t*errinfo,
                          cs_off_t off) {
     StatFile* sf = reinterpret_cast<StatFile*>(h);
     stats.writeSizeHisto.add(sz);
-    BlockTimer bt(&stats.writeTimeHisto);
+    BlockTimer bt(&stats.writeTimeHisto, "StatsOps::pwrite");
     ssize_t result = sf->orig_ops->pwrite(errinfo, sf->orig_handle, buf,
                                           sz, off);
     if (result > 0) {
@@ -100,7 +100,7 @@ cs_off_t StatsOps::goto_eof(couchstore_error_info_t* errinfo,
 couchstore_error_t StatsOps::sync(couchstore_error_info_t* errinfo,
                                   couch_file_handle h) {
     StatFile* sf = reinterpret_cast<StatFile*>(h);
-    BlockTimer bt(&stats.syncTimeHisto);
+    BlockTimer bt(&stats.syncTimeHisto, "StatsOps::sync");
     return sf->orig_ops->sync(errinfo, sf->orig_handle);
 }
 
