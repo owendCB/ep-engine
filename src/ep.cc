@@ -3165,17 +3165,23 @@ int EventuallyPersistentStore::flushVBucket(uint16_t vbid) {
                 }
 
                 if (item->getOperation() == queue_op::set_vbucket_state) {
-                    // No actual item explicitly persisted to (this op exists
-                    // to ensure a commit occurs with the current vbstate);
-                    // flag that we must trigger a snapshot even if there are
-                    // no 'real' items in the checkpoint.
-                    mustCheckpointVBState = true;
+                    // Daniel Owen
+                    // Wait until the VB is deleted before writing
+                    if (vbMap.isBucketDeletion(qi->getVBucketId())) {
+                        vb->rejectQueue.push(item);
+                        ++vb->opsReject;
+                    } else {
+                        // No actual item explicitly persisted to (this op exists
+                        // to ensure a commit occurs with the current vbstate);
+                        // flag that we must trigger a snapshot even if there are
+                        // no 'real' items in the checkpoint.
+                        mustCheckpointVBState = true;
 
-                    // Update queuing stats how this item has logically been
-                    // processed.
-                    stats.decrDiskQueueSize(1);
-                    vb->doStatsForFlushing(*item, item->size());
-
+                        // Update queuing stats how this item has logically been
+                        // processed.
+                        stats.decrDiskQueueSize(1);
+                        vb->doStatsForFlushing(*item, item->size());
+                    }
                 } else if (!prev || prev->getKey() != item->getKey()) {
                     prev = item.get();
                     ++items_flushed;
